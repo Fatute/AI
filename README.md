@@ -32,9 +32,9 @@ AI/
 │   ├── Node.py                   # Lớp biểu diễn nút (Node) trong cây/đồ thị tìm kiếm
 │   ├── Visualizer/               # Ứng dụng GUI trực quan hóa thuật toán
 │   │   ├── app.py                # File chạy chính của chương trình GUI (Tkinter)
-│   │   ├── visualizer.ipynb      # File Notebook thử nghiệm trực quan hóa
-│   │   ├── visualizer_test.py    # Các test case kiểm thử giao diện & thuật toán
-│   │   └── vacuum.png            # Asset hình ảnh của robot hút bụi
+│   │   
+│   │ 
+│   │   
 │   │
 │   # Các thư mục thuật toán lõi (BFS, DFS, UCS, A*, Local Search, CSP, Adversarial...)
 │   ├── BFS/
