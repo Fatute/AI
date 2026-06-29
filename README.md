@@ -444,7 +444,7 @@ Giải quyết bài toán bằng cách phân bổ các giá trị vào biến sa
 
 #### 3. AC-3 (Arc Consistency 3 - Nhất quán cung)
 
-<img width="892" height="462" alt="Adobe Express - ex" src="https://github.com/user-attachments/assets/5f66f37d-7996-48cc-86c3-719d83631566" />
+<img width="400" height="252" alt="ac" src="https://github.com/user-attachments/assets/53017762-0b6c-42b9-ad1b-e5aa8a2cff3e" />
 
 * **Mã giả (Pseudo-code):**
   ```python
