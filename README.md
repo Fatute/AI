@@ -315,6 +315,33 @@ Giải quyết bài toán khi môi trường không được quan sát đầy đ
 * **Độ phức tạp thời gian:** Thuộc lớp độ phức tạp lũy thừa theo số trạng thái vật lý $O(2^N)$ trong trường hợp xấu nhất, nhưng nhanh hơn trong thực tế nhờ các thông tin cảm biến giúp loại bỏ nhiều trạng thái phi lý.
 * **Độ phức tạp không gian:** $O(2^N)$.
 
+#### 3. AND-OR Search (Tìm kiếm AND-OR)
+* **Mã giả (Pseudo-code):**
+  ```python
+  def AND_OR_Graph_Search(problem):
+      return OR_Search(problem.initial_state, problem, [])
+
+  def OR_Search(state, problem, path):
+      if problem.is_goal(state): return empty_plan
+      if state in path: return failure
+      for action in problem.actions(state):
+          plan = AND_Search(results(state, action), problem, [state] + path)
+          if plan != failure:
+              return [action, plan]
+      return failure
+
+  def AND_Search(states, problem, path):
+      plan = {}
+      for s in states:
+          plan[s] = OR_Search(s, problem, path)
+          if plan[s] == failure: return failure
+      return plan
+  ```
+* **Cách chạy cơ bản:** Thường được tích hợp trong các bài toán lập kế hoạch (planning) hoặc giải quyết bài toán trong môi trường không xác định (nondeterministic).
+* **Ưu điểm:** Cho phép lập kế hoạch hành động thích ứng (contingency plan) trong môi trường có tính không xác định, trong đó các nút AND đại diện cho các phản hồi/kết quả có thể xảy ra từ môi trường và các nút OR đại diện cho lựa chọn hành động của agent.
+* **Độ phức tạp thời gian:** Lũy thừa trong trường hợp xấu nhất $O(b^d)$ phụ thuộc vào độ sâu của kế hoạch và số lượng kết quả của hành động.
+* **Độ phức tạp không gian:** Phụ thuộc vào kích thước của cây tìm kiếm/đồ thị được lưu trữ.
+
 ---
 
 ### **Nhóm 5: Constraint Satisfaction Problems (CSP - Bài toán thỏa mãn ràng buộc)**
@@ -358,6 +385,52 @@ Giải quyết bài toán bằng cách phân bổ các giá trị vào biến sa
 * **Ưu điểm:** Phát hiện sớm các nhánh không có lời giải trước khi đi sâu vào đệ quy, giảm kích thước cây tìm kiếm một cách đáng kể.
 * **Độ phức tạp thời gian:** Nhỏ hơn nhiều so với Backtracking thuần túy (nhỏ hơn $O(d^n)$ trong thực tế).
 * **Độ phức tạp không gian:** $O(n \cdot d)$ (để lưu trữ miền giá trị bị thu hẹp của các biến tại mỗi cấp đệ quy).
+
+#### 3. AC-3 (Arc Consistency 3 - Nhất quán cung)
+* **Mã giả (Pseudo-code):**
+  ```python
+  def AC_3(csp):
+      queue = Queue(all arcs in csp) # Khởi tạo hàng đợi chứa tất cả các cung ràng buộc
+      while not queue.is_empty():
+          (Xi, Xj) = queue.pop()
+          if Revise(csp, Xi, Xj):
+              if len(csp.domains[Xi]) == 0: return False # Không tồn tại lời giải
+              for Xk in csp.neighbors[Xi] - {Xj}:
+                  queue.push((Xk, Xi))
+      return True
+
+  def Revise(csp, Xi, Xj):
+      revised = False
+      for x in csp.domains[Xi]:
+          # Nếu không có giá trị y nào trong miền của Xj thỏa mãn ràng buộc giữa Xi và Xj
+          if no y in csp.domains[Xj] allows (x, y) to satisfy constraint:
+              remove x from csp.domains[Xi]
+              revised = True
+      return revised
+  ```
+* **Cách chạy cơ bản:** Được chạy như một bước tiền xử lý trước khi tìm kiếm hoặc tích hợp trực tiếp vào thuật toán quay lui (như thuật toán MAC - Maintaining Arc Consistency) để liên tục cắt tỉa miền giá trị.
+* **Ưu điểm:** Phát hiện sớm các mâu thuẫn ràng buộc và thu hẹp đáng kể miền giá trị của các biến, giúp giảm kích thước không gian tìm kiếm một cách cực kỳ mạnh mẽ.
+* **Độ phức tạp thời gian:** $O(e \cdot d^2)$ (với $e$ là số lượng cung/cạnh ràng buộc, $d$ là kích thước lớn nhất của miền giá trị).
+* **Độ phức tạp không gian:** $O(e)$ (để lưu trữ hàng đợi các cung).
+
+#### 4. Min-Conflicts (Tối thiểu hóa xung đột)
+* **Mã giả (Pseudo-code):**
+  ```python
+  def Min_Conflicts(csp, max_steps):
+      # Khởi tạo một phép gán đầy đủ nhưng ngẫu nhiên (hoặc bằng heuristic)
+      current = a complete assignment for csp
+      for i in range(1, max_steps):
+          if current satisfies all constraints: return current
+          var = a randomly chosen conflicted variable from csp
+          # Chọn giá trị tối thiểu hóa số lượng xung đột cho biến var
+          value = the value v for var that minimizes conflicts(var, v, current, csp)
+          set var = value in current
+      return failure
+  ```
+* **Cách chạy cơ bản:** Vào menu chọn **3. Tô màu bản đồ (CSP)**, chọn thuật toán **Min-Conflicts** (nếu có hỗ trợ tìm kiếm cục bộ), cấu hình số bước tối đa và nhấn **RUN**.
+* **Ưu điểm:** Là thuật toán tìm kiếm cục bộ cực kỳ hiệu quả cho các bài toán CSP lớn (ví dụ: bài toán triệu quân hậu - Million Queens), tìm ra lời giải rất nhanh trong thời gian gần như tuyến tính.
+* **Độ phức tạp thời gian:** Thường cực nhanh trong thực tế (gần như $O(n)$ bước) đối với các bài toán có mật độ ràng buộc vừa phải.
+* **Độ phức tạp không gian:** $O(n)$ (chỉ cần lưu trữ trạng thái gán giá trị hiện tại của các biến).
 
 ---
 
