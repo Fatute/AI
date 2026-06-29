@@ -105,8 +105,6 @@ def print_clean_plan(plan):
             print_clean_plan(sub_plan)
 
 
-
-# --- CHẠY THỬ NGHIỆM VỚI TEST CASE CỦA BẠN ---
 if __name__ == "__main__":
     matrix = np.array([
         ['1', '1', '1', '0'],
