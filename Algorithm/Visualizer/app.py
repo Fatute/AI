@@ -31,42 +31,37 @@ csp_canvas = None
 csp_tree = None
 tree_items = {}
 polygon_ids = {}
+speed_scale = None
 
-polygons_coords = {
-    "Củ Chi": [100, 50, 250, 50, 280, 160, 140, 200, 80, 140],
-    "Hóc Môn": [140, 200, 280, 160, 320, 240, 220, 280, 150, 250],
-    "Quận 12": [280, 160, 420, 180, 440, 250, 320, 240],
-    "Gò Vấp": [350, 250, 440, 250, 430, 300, 340, 290],
-    "Tân Bình": [290, 300, 340, 290, 350, 360, 290, 370],
-    "Tân Phú": [220, 280, 290, 300, 290, 370, 220, 340],
-    "Bình Tân": [150, 250, 220, 280, 220, 340, 230, 440, 140, 400],
-    "Bình Thạnh": [430, 300, 500, 260, 540, 330, 460, 350],
-    "Thủ Đức": [440, 180, 620, 160, 650, 360, 540, 330, 500, 260, 420, 180],
-    "Phú Nhuận": [350, 290, 430, 300, 460, 350, 380, 350],
-    "Quận 3": [380, 350, 460, 350, 450, 400, 380, 400],
-    "Quận 10": [320, 370, 380, 370, 380, 420, 320, 420],
-    "Quận 11": [260, 370, 320, 370, 320, 430, 260, 430],
-    "Quận 6": [230, 440, 300, 440, 290, 490, 220, 480],
-    "Quận 5": [300, 440, 390, 440, 380, 490, 290, 490],
-    "Quận 1": [450, 400, 520, 370, 540, 420, 470, 440],
-    "Quận 4": [470, 440, 540, 420, 550, 460, 490, 470],
-    "Quận 8": [220, 480, 380, 490, 410, 540, 260, 540],
-    "Quận 7": [460, 480, 570, 470, 580, 560, 480, 570],
-    "Bình Chánh": [60, 410, 140, 400, 230, 440, 260, 540, 410, 540, 430, 620, 320, 680, 100, 580],
-    "Nhà Bè": [430, 620, 480, 570, 580, 560, 530, 680, 440, 680],
-    "Cần Giờ": [530, 680, 580, 560, 750, 600, 700, 850, 550, 850]
+# Node positions cho đồ thị ràng buộc CSP (x, y) trên canvas
+node_positions = {
+    "Củ Chi":    (155, 55),
+    "Hóc Môn":   (180, 145),
+    "Quận 12":   (295, 140),
+    "Gò Vấp":    (340, 200),
+    "Bình Thạnh":(410, 205),
+    "Thủ Đức":   (490, 165),
+    "Tân Bình":  (315, 255),
+    "Tân Phú":   (245, 255),
+    "Bình Tân":  (190, 305),
+    "Bình Chánh":(155, 435),
+    "Phú Nhuận": (385, 255),
+    "Quận 10":   (335, 305),
+    "Quận 11":   (275, 305),
+    "Quận 3":    (395, 305),
+    "Quận 1":    (435, 340),
+    "Quận 5":    (355, 360),
+    "Quận 6":    (280, 360),
+    "Quận 4":    (460, 385),
+    "Quận 8":    (315, 415),
+    "Quận 7":    (460, 440),
+    "Nhà Bè":    (430, 510),
+    "Cần Giờ":   (490, 590),
 }
+NODE_RADIUS = 24
 
-label_positions = {
-    "Củ Chi": [170, 100], "Hóc Môn": [220, 210], "Quận 12": [350, 200],
-    "Gò Vấp": [390, 270], "Tân Bình": [345, 330], "Tân Phú": [255, 320],
-    "Bình Tân": [185, 330], "Bình Thạnh": [480, 305], "Thủ Đức": [560, 240],
-    "Phú Nhuận": [410, 325], "Quận 3": [415, 375], "Quận 10": [350, 395],
-    "Quận 11": [290, 395], "Quận 6": [260, 460], "Quận 5": [340, 460],
-    "Quận 1": [490, 405], "Quận 4": [510, 445], "Quận 8": [330, 515],
-    "Quận 7": [520, 515], "Bình Chánh": [150, 520], "Nhà Bè": [490, 625],
-    "Cần Giờ": [620, 710]
-}
+# Keep label_positions for legacy compatibility
+label_positions = {k: list(v) for k, v in node_positions.items()}
 
 colors_hex = {"Đỏ": "#FF5733", "Xanh lá": "#2ECC71", "Xanh dương": "#3498DB", "Vàng": "#F1C40F"}
 
@@ -100,6 +95,13 @@ constrain = {
     "Nhà Bè": ["Cần Giờ", "Quận 7", "Bình Chánh"],
     "Cần Giờ": ["Nhà Bè"]
 }
+
+# Đảm bảo đồ thị ràng buộc là ĐỐI XỨNG (hai chiều)
+# Ví dụ: nếu Củ Chi → Quận 12 thì Quận 12 cũng phải → Củ Chi
+for _area, _neighbors in list(constrain.items()):
+    for _nb in _neighbors:
+        if _area not in constrain[_nb]:
+            constrain[_nb].append(_area)
 
 colors = ["Đỏ", "Vàng", "Xanh lá", "Xanh dương"]
 result = {}
@@ -167,12 +169,12 @@ def reset_blind_ui():
             ]
             try:
                 grid1_frame = window.nametowidget(".!frame.!labelframe")
-                grid1_frame.config(text="Belief State")
+                grid1_frame.config(text="Belief State A")
                 grid2_frame = window.nametowidget(".!frame.!labelframe2")
-                grid2_frame.config(text="Real State (With '?')")
+                grid2_frame.config(text="Belief State B")
             except Exception:
                 pass
-            draw_blind_states(start_belief[0], real_state)
+            draw_blind_states(start_belief[0], start_belief[1])
         else:
             start_belief = [
                 np.array([['1', '0', '1', '0'],
@@ -507,16 +509,16 @@ def run_others():
     elif algo == "Simulate Annealing":
         solutions, message = simulated_annealing(matrix, row, col)
 
-    # Trực quan hóa quá trình tìm kiếm (Exploration)
-    if reached and algo not in ["Simple_Hill", "Steepest Ascent", "Stochastic", "Random Restart"]:
-        for state in reached:
-            if stop_execution:
-                text_area.insert(END, "\nĐÃ DỪNG THUẬT TOÁN!\n")
-                return
-            state_arr = np.array(state)
-            draw_state(state_arr)
-            window.update()
-            time.sleep(0.08)
+    # Trực quan hóa quá trình tìm kiếm (Exploration) (Đã ẩn để chỉ in đường đi)
+    # if reached and algo not in ["Simple_Hill", "Steepest Ascent", "Stochastic", "Random Restart"]:
+    #     for state in reached:
+    #         if stop_execution:
+    #             text_area.insert(END, "\nĐÃ DỪNG THUẬT TOÁN!\n")
+    #             return
+    #         state_arr = np.array(state)
+    #         draw_state(state_arr)
+    #         window.update()
+    #         time.sleep(0.08)
             
     if algo == "Random Restart" and reached_list:
         for restart_id, history in enumerate(reached_list):
@@ -585,7 +587,7 @@ def run_others():
             text_area.insert(END, "KHÔNG TÌM THẤY ĐƯỜNG ĐI!\n")
             solution_text.insert(END, "NO SOLUTION")
 
-def draw_blind_states(state1, state2=None):
+def draw_blind_states(state1, state2=None, is_sensorless=False):
     # Vẽ Grid 1
     for i in range(4):
         for j in range(4):
@@ -596,9 +598,9 @@ def draw_blind_states(state1, state2=None):
             elif val == '0':
                 cell.config(bg='light green')
             elif val == 'x':
-                cell.config(bg='white')
+                cell.config(bg='yellow')
             elif val == '?':
-                cell.config(bg='white')
+                cell.config(bg='gray')
 
     # Vẽ Grid 2
     if state2 is not None:
@@ -611,9 +613,10 @@ def draw_blind_states(state1, state2=None):
                 elif val == '0':
                     cell.config(bg='light green')
                 elif val == 'x':
-                    cell.config(bg='white')
+                    cell.config(bg='yellow')
                 elif val == '?':
-                    cell.config(bg='white')
+                    cell.config(bg='gray')
+
 
 def show_blind_visualizer():
     global text_area, solution_text, cells, cells2, current_group
@@ -736,16 +739,16 @@ def run_blind():
         else:
             solutions, explored = sensorless_search_dfs(start_belief)
             
-        # Trực quan duyệt Belief States
-        for belief in explored:
-            if stop_execution:
-                text_area.insert(END, "\nĐÃ DỪNG THUẬT TOÁN!\n")
-                return
-            s1 = belief[0]
-            s2 = belief[1] if len(belief) > 1 else belief[0]
-            draw_blind_states(s1, s2)
-            window.update()
-            time.sleep(0.15)
+        # Trực quan duyệt Belief States (Đã ẩn để chỉ in đường đi)
+        # for belief in explored:
+        #     if stop_execution:
+        #         text_area.insert(END, "\nĐÃ DỪNG THUẬT TOÁN!\n")
+        #         return
+        #     s1 = belief[0]
+        #     s2 = belief[1] if len(belief) > 1 else belief[0]
+        #     draw_blind_states(s1, s2)
+        #     window.update()
+        #     time.sleep(0.15)
             
         if solutions:
             text_area.insert(END, "ĐÃ TÌM ĐƯỢC CHUỖI HÀNH ĐỘNG THÀNH CÔNG!\n")
@@ -801,17 +804,17 @@ def run_blind():
         
         solutions, explored = partially_observation_search(start_belief, real_state)
         
-        # Trực quan hóa bước duyệt
-        for belief, real in explored:
-            if stop_execution:
-                text_area.insert(END, "\nĐÃ DỪNG THUẬT TOÁN!\n")
-                return
-            draw_blind_states(belief[0], real)
-            window.update()
-            time.sleep(0.2)
+        # Trực quan hóa bước duyệt (Đã ẩn để chỉ in đường đi)
+        # for belief, real in explored:
+        #     if stop_execution:
+        #         text_area.insert(END, "\nĐÃ DỪNG THUẬT TOÁN!\n")
+        #         return
+        #     draw_blind_states(belief[0], real)
+        #     window.update()
+        #     time.sleep(0.2)
             
         if solutions:
-            text_area.insert(END, "ĐÃ TÌM THẤY LỜI GIẢI AN TOÀN CHO MÔI TRƯỜNG PHÂN NỬA!\n")
+            text_area.insert(END, "ĐÃ TÌM THẤY LỜI GIẢI AN TOÀN CHO MÔI TRƯỜNG MỘT PHẦN!\n")
             draw_blind_states(start_belief[0], real_state)
             window.update()
             time.sleep(0.5)
@@ -857,7 +860,9 @@ def show_csp_visualizer():
     
     csp_algos = [
         ("Backtracking", "Backtracking"),
-        ("Forward Checking", "Forward Checking")
+        ("Forward Checking", "Forward Checking"),
+        ("AC3", "AC3"),
+        ("Min-Conflicts", "Min-Conflicts")
     ]
     
     for display_name, value_name in csp_algos:
@@ -887,7 +892,7 @@ def show_csp_visualizer():
     left_frame = Frame(window, bg="#ECEFF1")
     left_frame.grid(row=0, column=1, rowspan=2, sticky="nsew", padx=10, pady=10)
     
-    title_label = Label(left_frame, text="Bản đồ TP.HCM sau sáp nhập", font=("Arial", 12, "bold"), bg="#ECEFF1", anchor="w")
+    title_label = Label(left_frame, text="Đồ thị ràng buộc – Tô màu TP.HCM (CSP)", font=("Arial", 12, "bold"), bg="#ECEFF1", anchor="w")
     title_label.pack(fill=X, pady=(0, 5))
 
     csp_canvas = Canvas(left_frame, bg="#E3F2FD", highlightthickness=1, highlightbackground="#B0BEC5")
@@ -925,26 +930,46 @@ def show_csp_visualizer():
     draw_blank_map()
 
 def draw_blank_map():
-    global csp_canvas, csp_tree, tree_items, polygon_ids
+    global csp_canvas, csp_tree, tree_items, polygon_ids, node_positions
     if not csp_canvas or not csp_tree:
         return
     csp_canvas.delete("all")
     polygon_ids = {}
-    
-    # Vẽ đa giác rỗng (màu xám nhạt ban đầu)
-    for area, coords in polygons_coords.items():
-        poly_id = csp_canvas.create_polygon(coords, fill="#FAFAFA", outline="#37474F", width=1.5)
-        polygon_ids[area] = poly_id
-        
-        # Ghi chữ nhãn tên quận/huyện
-        lx, ly = label_positions[area]
-        display_text = area.replace(" ", "\n") if " " in area and len(area) > 5 else area
-        csp_canvas.create_text(lx, ly, text=display_text, font=("Arial", 8, "bold"), fill="#263238", justify="center")
-        
-    # Đổ dữ liệu tĩnh ban đầu vào bảng trạng thái
+
+    # --- Vẽ các cạnh ràng buộc trước (nền) ---
+    drawn_edges = set()
+    for area, neighbors in constrain.items():
+        if area not in node_positions:
+            continue
+        x1, y1 = node_positions[area]
+        for nb in neighbors:
+            if nb not in node_positions:
+                continue
+            edge_key = tuple(sorted([area, nb]))
+            if edge_key in drawn_edges:
+                continue
+            drawn_edges.add(edge_key)
+            x2, y2 = node_positions[nb]
+            csp_canvas.create_line(x1, y1, x2, y2, fill="#B0BEC5", width=1.5)
+
+    # --- Vẽ các node (hình tròn) ---
+    for area, (cx, cy) in node_positions.items():
+        r = NODE_RADIUS
+        node_id = csp_canvas.create_oval(
+            cx - r, cy - r, cx + r, cy + r,
+            fill="#ECEFF1", outline="#37474F", width=2
+        )
+        polygon_ids[area] = node_id
+        # Label bên trong node
+        short = area.replace("Quận ", "Q.").replace("Huyện ", "H.")
+        display = short.replace(" ", "\n") if len(short) > 6 else short
+        csp_canvas.create_text(cx, cy, text=display, font=("Arial", 7, "bold"),
+                               fill="#1A237E", justify="center")
+
+    # --- Đổ dữ liệu tĩnh vào bảng trạng thái ---
     for item in csp_tree.get_children():
         csp_tree.delete(item)
-    for area in polygons_coords.keys():
+    for area in variables:
         item_id = csp_tree.insert("", END, values=(area, "Chưa tô"))
         tree_items[area] = item_id
 
@@ -954,9 +979,27 @@ def run_csp():
         run_csp_backtracking()
     elif algo == "Forward Checking":
         run_csp_forward_checking()
+    elif algo == "AC3":
+        run_csp_ac3()
+    elif algo == "Min-Conflicts":
+        run_csp_min_conflicts()
+
+def color_node(area, fill_color):
+    """Tô màu node trên đồ thị ràng buộc và vẽ lại nhãn lên trên."""
+    global csp_canvas, polygon_ids, node_positions
+    if not csp_canvas or area not in polygon_ids or area not in node_positions:
+        return
+    csp_canvas.itemconfig(polygon_ids[area], fill=fill_color)
+    cx, cy = node_positions[area]
+    short = area.replace("Quận ", "Q.").replace("Huyện ", "H.")
+    display = short.replace(" ", "\n") if len(short) > 6 else short
+    # Xác định màu chữ tương phản
+    text_color = "#FFFFFF" if fill_color not in ("#ECEFF1", "#FAFAFA") else "#1A237E"
+    csp_canvas.create_text(cx, cy, text=display, font=("Arial", 7, "bold"),
+                           fill=text_color, justify="center")
 
 def run_csp_backtracking():
-    global stop_execution, result
+    global stop_execution, result, speed_scale
     stop_execution = False
     
     result.clear()
@@ -988,7 +1031,7 @@ def run_csp_backtracking():
                 
                 # Cập nhật GUI
                 if csp_canvas and csp_tree:
-                    csp_canvas.itemconfig(polygon_ids[area], fill=colors_hex[color])
+                    color_node(area, colors_hex[color])
                     csp_tree.item(tree_items[area], values=(area, color))
                 window.update()
                 time.sleep(speed_scale.get())
@@ -1002,7 +1045,7 @@ def run_csp_backtracking():
                     
                 # Cập nhật GUI khi Backtrack
                 if csp_canvas and csp_tree:
-                    csp_canvas.itemconfig(polygon_ids[area], fill="#FAFAFA")
+                    color_node(area, "#ECEFF1")
                     csp_tree.item(tree_items[area], values=(area, "Chưa tô"))
                 window.update()
                 time.sleep(speed_scale.get())
@@ -1017,8 +1060,9 @@ def run_csp_backtracking():
     else:
         print("Không thể tô màu hoặc đã bị dừng.", flush=True)
 
+
 def run_csp_forward_checking():
-    global stop_execution, result
+    global stop_execution, result, speed_scale
     stop_execution = False
     
     result.clear()
@@ -1060,7 +1104,7 @@ def run_csp_forward_checking():
             
             # Cập nhật GUI
             if csp_canvas and csp_tree:
-                csp_canvas.itemconfig(polygon_ids[area], fill=colors_hex[color])
+                color_node(area, colors_hex[color])
                 csp_tree.item(tree_items[area], values=(area, color))
             window.update()
             time.sleep(speed_scale.get())
@@ -1084,7 +1128,7 @@ def run_csp_forward_checking():
             assigned_areas.discard(area)
             
             if csp_canvas and csp_tree:
-                csp_canvas.itemconfig(polygon_ids[area], fill="#FAFAFA")
+                color_node(area, "#ECEFF1")
                 csp_tree.item(tree_items[area], values=(area, "Chưa tô"))
             window.update()
             time.sleep(speed_scale.get())
@@ -1098,6 +1142,184 @@ def run_csp_forward_checking():
             print(f"{area}: {color}", flush=True)
     else:
         print("Không thể tô màu hoặc đã bị dừng.", flush=True)
+
+def run_csp_ac3():
+    global stop_execution, result, speed_scale
+    stop_execution = False
+    
+    result.clear()
+    assigned_areas = set()
+    domains = {area: list(colors) for area in constrain.keys()}
+    draw_blank_map()
+    window.update()
+
+    def ac3(assigned_area, assigned_color):
+        queue = []
+        for neighbor in constrain[assigned_area]:
+            if neighbor not in assigned_areas:
+                queue.append((neighbor, assigned_area))
+        
+        removals = []
+        while queue:
+            if stop_execution:
+                return False, removals
+            
+            xi, xj = queue.pop(0)
+            revised, removed_colors = revise(xi, xj)
+            if revised:
+                removals.extend([(xi, c) for c in removed_colors])
+                if not domains[xi]:
+                    return False, removals
+                for neighbor in constrain[xi]:
+                    if neighbor != xj and neighbor not in assigned_areas:
+                        queue.append((neighbor, xi))
+        return True, removals
+
+    def revise(xi, xj):
+        revised = False
+        removed_colors = []
+        for x_color in list(domains[xi]):
+            xj_domain = [result[xj]] if xj in assigned_areas else domains[xj]
+            has_support = any(y_color != x_color for y_color in xj_domain)
+            if not has_support:
+                domains[xi].remove(x_color)
+                removed_colors.append(x_color)
+                revised = True
+        return revised, removed_colors
+
+    def backtrack_ac3(index):
+        if stop_execution:
+            return False
+            
+        if index == len(variables):
+            return True
+            
+        area = variables[index]
+        
+        for color in list(domains[area]):
+            if stop_execution:
+                return False
+                
+            result[area] = color
+            assigned_areas.add(area)
+            
+            old_domains = {v: list(d) for v, d in domains.items()}
+            domains[area] = [color]
+            
+            print(f"Thử tô màu {color} cho {area} (AC-3)", flush=True)
+            
+            if csp_canvas and csp_tree:
+                color_node(area, colors_hex[color])
+                csp_tree.item(tree_items[area], values=(area, color))
+            window.update()
+            time.sleep(speed_scale.get())
+            
+            success, removals = ac3(area, color)
+            
+            if success:
+                if backtrack_ac3(index + 1):
+                    return True
+                print(f"-> Nhánh sau thất bại. Backtrack {area}, khôi phục domains...", flush=True)
+            
+            for v, d in old_domains.items():
+                domains[v] = d
+                
+            if area in result:
+                del result[area]
+            assigned_areas.discard(area)
+            
+            if csp_canvas and csp_tree:
+                color_node(area, "#ECEFF1")
+                csp_tree.item(tree_items[area], values=(area, "Chưa tô"))
+            window.update()
+            time.sleep(speed_scale.get())
+            
+        return False
+
+    print("----- CHẠY CSP AC-3 -----", flush=True)
+    if backtrack_ac3(0):
+        print("Kết quả cuối cùng:", flush=True)
+        for area, color in result.items():
+            print(f"{area}: {color}", flush=True)
+    else:
+        print("Không thể tô màu hoặc đã bị dừng.", flush=True)
+
+def run_csp_min_conflicts():
+    global stop_execution, result, speed_scale
+    stop_execution = False
+    
+    result.clear()
+    draw_blank_map()
+    window.update()
+    
+    for area in variables:
+        color = random.choice(colors)
+        result[area] = color
+        if csp_canvas and csp_tree:
+            color_node(area, colors_hex[color])
+            csp_tree.item(tree_items[area], values=(area, color))
+    window.update()
+    time.sleep(speed_scale.get())
+    
+    def get_conflicted_variables():
+        conflicted = []
+        for area in variables:
+            current_color = result[area]
+            for neighbor in constrain[area]:
+                if result.get(neighbor) == current_color:
+                    conflicted.append(area)
+                    break
+        return conflicted
+
+    def count_conflicts(area, color):
+        count = 0
+        for neighbor in constrain[area]:
+            if result.get(neighbor) == color:
+                count += 1
+        return count
+
+    max_steps = 200
+    print("----- CHẠY CSP MIN-CONFLICTS -----", flush=True)
+    
+    for step in range(max_steps):
+        if stop_execution:
+            print("Đã bị dừng.", flush=True)
+            return
+            
+        conflicted_vars = get_conflicted_variables()
+        if not conflicted_vars:
+            print(f"Tìm thấy lời giải sau {step} bước!", flush=True)
+            print("Kết quả cuối cùng:", flush=True)
+            for area, color in result.items():
+                print(f"{area}: {color}", flush=True)
+            return
+            
+        var = random.choice(conflicted_vars)
+        
+        best_colors = []
+        min_conflict = float('inf')
+        
+        for color in colors:
+            conflict_count = count_conflicts(var, color)
+            if conflict_count < min_conflict:
+                min_conflict = conflict_count
+                best_colors = [color]
+            elif conflict_count == min_conflict:
+                best_colors.append(color)
+                
+        chosen_color = random.choice(best_colors)
+        
+        if result[var] != chosen_color:
+            result[var] = chosen_color
+            print(f"Bước {step+1}: Đổi màu {var} thành {chosen_color} (xung đột tối thiểu = {min_conflict})", flush=True)
+            
+            if csp_canvas and csp_tree:
+                color_node(var, colors_hex[chosen_color])
+                csp_tree.item(tree_items[var], values=(var, chosen_color))
+            window.update()
+            time.sleep(speed_scale.get() * 1.5)
+            
+    print("Không tìm thấy lời giải sau số bước tối đa.", flush=True)
 
 def show_adversarial_visualizer():
     global text_area, solution_text, cells, current_group, selected_adversarial_algo
@@ -2682,7 +2904,7 @@ def draw_state(state):
             elif value == '0':
                 cells[i][j].config(bg='light green')
             elif value == 'x':
-                cells[i][j].config(bg='white')
+                cells[i][j].config(bg='yellow')
 # === Cell 33 ===
 def ida_star(matrix, row, col):
 
@@ -4098,12 +4320,12 @@ def draw_blind_states(state1, state2=None, is_sensorless=False):
             elif val == '0':
                 cell.config(bg='light green')
             elif val == 'x':
-                cell.config(bg='white')
+                cell.config(bg='yellow')
             elif val == '?':
                 if is_sensorless:
                     cell.config(bg='black')  # Đối với sensorless '?' thay thành ô đen
                 else:
-                    cell.config(bg='white')
+                    cell.config(bg='gray')
 
     # Lưới 2 (Belief B hoặc Real)
     if state2 is not None:
@@ -4116,12 +4338,12 @@ def draw_blind_states(state1, state2=None, is_sensorless=False):
                 elif val == '0':
                     cell.config(bg='light green')
                 elif val == 'x':
-                    cell.config(bg='white')
+                    cell.config(bg='yellow')
                 elif val == '?':
                     if is_sensorless:
                         cell.config(bg='black')  # Đối với sensorless '?' thay thành ô đen
                     else:
-                        cell.config(bg='white')
+                        cell.config(bg='gray')
 
 def show_blind_visualizer():
     global text_area, solution_text, cells, cells2, current_group
@@ -4355,7 +4577,7 @@ def run_blind():
         
         # Trực quan hóa Solution Path (Đường đi kết quả)
         if solutions:
-            text_area.insert(END, "ĐÃ TÌM THẤY LỜI GIẢI AN TOÀN CHO MÔI TRƯỜNG PHÂN NỬA!\n")
+            text_area.insert(END, "ĐÃ TÌM THẤY LỜI GIẢI AN TOÀN CHO MÔI TRƯỜNG MỘT PHẦN!\n")
             
             # In ra Terminal theo phong cách partially_observation.ipynb
             print("TIM THAY LOI GIAI", flush=True)
@@ -4476,7 +4698,7 @@ def current_player(board):
     else:
         return "O"
 
-def result(board, row, col, sign):
+def result_board(board, row, col, sign):
     temp = [r[:] for r in board]
     temp[row][col] = sign
     return temp
@@ -4496,7 +4718,7 @@ def minimax(board):
         
         blank_position = find_blank(board)
         for x in blank_position:
-            child = result(board, x[0], x[1], 'X')
+            child = result_board(board, x[0], x[1], 'X')
             score, path = minimax(child)
             if score > value:
                value = score
@@ -4508,7 +4730,7 @@ def minimax(board):
         
         blank_position = find_blank(board)
         for x in blank_position:
-            child = result(board, x[0], x[1], 'O')
+            child = result_board(board, x[0], x[1], 'O')
             score, path = minimax(child)
             if score < value:
                value = score
@@ -4528,7 +4750,7 @@ def alphabeta(board, alpha, beta):
         value = -float('inf')
         best_path = []
         for move in find_blank(board):
-            child = result(board, move[0], move[1], 'X')
+            child = result_board(board, move[0], move[1], 'X')
             score, path = alphabeta(child, alpha, beta)
             if score > value:
                 value = score
@@ -4541,7 +4763,7 @@ def alphabeta(board, alpha, beta):
         value = float('inf')
         best_path = []
         for move in find_blank(board):
-            child = result(board, move[0], move[1], 'O')
+            child = result_board(board, move[0], move[1], 'O')
             score, path = alphabeta(child, alpha, beta)
             if score < value:
                 value = score
@@ -4564,7 +4786,7 @@ def expectimax(board):
         value = -float('inf')
         best_path = []
         for move in find_blank(board):
-            child = result(board, move[0], move[1], 'X')
+            child = result_board(board, move[0], move[1], 'X')
             score, path = expectimax(child)
             if score > value:
                 value = score
@@ -4576,7 +4798,7 @@ def expectimax(board):
         best_path = []
         rate = 1 / len(blank_position)
         for move in blank_position:
-            child = result(board, move[0], move[1], 'O')
+            child = result_board(board, move[0], move[1], 'O')
             score, path = expectimax(child)
             expected_value += rate * score
             if best_path == []:
