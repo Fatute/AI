@@ -68,6 +68,9 @@ AI/
 Các thuật toán tìm kiếm mù duyệt qua không gian trạng thái mà không có thông tin bổ sung về khoảng cách đến mục tiêu ngoài định nghĩa bài toán.
 
 #### 1. BFS (Breadth-First Search)
+
+<img width="1862" height="1102" alt="bfs_1" src="https://github.com/user-attachments/assets/983bb24f-4f96-4dc6-9d60-12dc17d5fcf3" />
+
 * **Mã giả (Pseudo-code):**
   ```python
   def BFS(problem):
